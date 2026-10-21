@@ -1,156 +1,130 @@
-# second deposit: почему FTD не делают второй депозит
+# second deposit: why first-time depositors do not come back
 
-Скилл для Claude Code. Берет выгрузки из бэк-офиса казино и за пару минут показывает, на каком сценарии первой сессии теряются игроки, сколько Sum Dep это стоит в месяц и кого из свежих FTD еще можно вернуть.
+[Русская версия](README.ru.md) | [Skill page](https://sychov-igaming.com/en/skills/second-deposit/)
 
-- **12 причин.** Каждый FTD получает одну: много отказов подряд, второй депозит не прошел, вывод отклонен, запросили документы, отыграл бонус и вывел, долгий вывод, выиграл и вывел, бонус с тяжелым вейджером, сгорел быстро, выиграл и не вывел, деньги на балансе, FTD не с первой попытки. Остальные дают норму.
-- **Недобор в деньгах.** Сколько вторых депозитов не хватает до нормы по каждой причине и сколько Sum Dep за 30 дней они бы принесли.
-- **24 показателя с определениями.** Второй депозит за 24 часа, 72 часа, 7 и 30 дней, время до него, Sum Dep на FTD, апрув кассы, выводы и отказы по ним, бонусы, первая сессия, динамика по неделям.
-- **Где теряете.** Способы оплаты, страны, источники трафика, где второй депозит делают заметно реже, чем игроки с таким же первым депозитом.
-- **Список на сегодня.** FTD за последние 72 часа без второго депозита: причина, состояние (вывод в обработке или выплачен, бонус еще отыгрывается), когда писать, что предложить и способ оплаты, который проходит в стране игрока. Файл для импорта в CRM.
-- **Правила стран.** Законный срок выплаты (в Бразилии вывод долгий уже через 2 часа), запрещенные в стране способы оплаты не подсказываются, при отказе по законному лимиту депозитов скилл советует объяснить лимит, а не предлагать другой способ. Только официальные источники: [references/geo_rules.md](references/geo_rules.md).
+A Claude Code skill that reads your back-office exports (deposits with all attempts, and if you have them, withdrawals, bonuses, bets and players) and shows why first-time depositors (FTD) do not make a second deposit. Each FTD gets one of 12 reasons, from failed top-ups and slow withdrawals to heavy wagering bonuses and burning out fast. For each reason the skill counts how many second deposits are missing compared with the norm of similar players and how much Sum Dep that is per month, calculates 24 metrics with definitions, finds payment methods, countries and traffic sources where the second deposit is clearly rarer than for players with a similar first deposit, and builds today's list of recent FTDs to win back, with an action for each player's state and country. The calculation is done by Python scripts on your machine; Claude sees column names, formats and totals, never player rows.
 
-![Пример отчета на демо-данных](examples/report-demo.png)
+## Who it is for
 
-Живой пример: [examples/report-demo.html](examples/report-demo.html) (скачайте репозиторий и откройте файл в браузере). Данные в нем вымышлены.
+Casino and betting teams:
 
-## Когда смотреть
+- **CRM and retention.** A daily list of recent FTDs without a second deposit, one file per action to load into your CRM as a segment, and triggers for the same signals.
+- **Product and payments.** Where the first session, the cashier and withdrawals lose players, and what that costs per month.
+- **Analysts** who prepare the exports: a SQL file with one query per export file.
 
-С первых часов после FTD. Скилл работает в двух режимах:
+## What you get
 
-- **Первый запуск и раз в месяц:** выгрузка за 60-120 дней. Скилл считает норму, недобор и показатели и сохраняет профиль проекта.
-- **Каждый день:** выгрузка за последние 7 дней с датой первого депозита у игроков. Скилл строит список на сегодня с прогнозом, способы оплаты и история причин берутся из профиля.
+![Report on demo data](examples/report-demo.png)
 
-Внутри:
+Live example: [examples/report-demo.html](examples/report-demo.html) (download the repository and open the file in a browser). The example is in Russian and its data is fictional.
 
-- **Список на сегодня: свежие FTD за последние 72 часа.** Сигнал виден рано: отказ в кассе сразу, бонус с тяжелым вейджером в момент FTD, "сгорел быстро" в первую сессию, вывод в момент запроса, деньги на балансе через сутки. Игрок остается в списке первые 3 дня, пока не сделал второй депозит. Запускайте каждый день: расчет занимает пару минут.
-- **Расчет потерь: FTD старше 7 дней.** Вернулся игрок или нет, видно только через 7 дней, поэтому норму и стоимость каждого сценария скилл считает по истории.
+- **12 reasons.** Many failures in a row, second deposit failed, withdrawal rejected, documents requested, wagered a bonus and withdrew, slow withdrawal, won and withdrew, heavy wagering bonus, burned out fast, won and kept the balance, money left on balance, FTD not on the first try. Everyone else forms the norm.
+- **Missing money.** How many second deposits each reason is short of the norm and how much Sum Dep over 30 days they would bring, as a range.
+- **24 metrics with definitions.** Second deposit within 24 hours, 72 hours, 7 and 30 days, time to it, Sum Dep per FTD, cashier approval rate, withdrawals and their rejections, bonuses, first session, weekly trend.
+- **Segments.** Payment methods, countries and traffic sources where the gap is larger than chance.
+- **Today's list.** FTDs from the last 72 hours without a second deposit: reason, state (withdrawal pending or paid, bonus still being wagered), when to contact, what to offer, and a payment method that works in the player's country.
+- **Country rules.** Legal payout deadlines (in Brazil a withdrawal counts as slow after 2 hours), payment methods banned in the country are never suggested, and a decline caused by a legal deposit limit gets "explain the limit" instead of another payment method. Official sources only: [references/geo_rules.md](references/geo_rules.md).
 
-Чтобы реагировать без ручного запуска, те же сигналы ставятся триггерами в CRM: [references/scenarios.md](references/scenarios.md).
+The results go to a `second-deposit` folder next to your exports: `report.html` (the report in English, Ukrainian or Russian, in the language of your question), `rescue_list.csv` (the list for your CRM), `summary.json` (totals), `scenarios.csv` and `segments.csv` (tables), `excluded_rg.csv` (players excluded for responsible gaming) and `lists/<date>/` with `actions.csv`, one file per action and `rescue_list.xlsx`.
 
-**Контрольная группа.** 20% списка (кроме сервисных случаев: отказы в кассе подряд, отклоненный и долгий вывод, документы) не получают сообщений 7 дней. Скилл ведет журнал и, когда у этих игроков пройдет 7 дней, показывает, на сколько чаще возвращаются те, кому писали. Это единственная честная цифра эффекта.
+Each player in the list has reason and action codes (`reason_code`, `action_code`), a priority (1 now, 2 within a day, 3 in a chain or in 1-3 days), a send time `send_after_utc` and the snapshot time `snapshot_utc`. In your CRM, add the condition "no deposit after `snapshot_utc`".
 
-## Учится под ваш проект
+### Two modes
 
-- **Есть история:** полный запуск собирает профиль проекта: проценты второго депозита за 24 часа, 72 часа, 7 и 30 дней, норму похожих игроков, возвраты по каждой причине, додепы (сумма второго депозита, депозитов у вернувшегося, Sum Dep), апрув по странам и способам оплаты, время выплат. Ежедневные запуски считают по нему прогноз: сколько игроков из списка вернутся без действий и сколько не хватает до нормы.
-- **Истории нет:** чужих цифр скилл не подставляет. Надежного публичного бенчмарка второго депозита нет ни по одной стране: мы искали и не нашли открытых цифр с методикой. Причины, действия и правила стран работают с первого дня. Норма, прогноз и деньги появятся с 8-го дня, когда у первых FTD пройдет 7 дней: как только таких FTD наберется 50, скилл сам перейдет на полный расчет по вашим данным.
+- **Full run** (first time, then once a month): an export for 60-120 days. Reasons, missing second deposits and Sum Dep against the norm, metrics, segments and the list. Saves a project profile.
+- **Daily list**: an export for the last 7 days, with the first deposit date for each player. Today's list with a forecast based on the profile.
 
-## Данные остаются у вас
+**Control group.** 20% of the list (except service cases: failures in a row, rejected and slow withdrawals, documents) get no messages for 7 days. The skill keeps a log and shows how much more often contacted players come back.
 
-Считают скрипты на вашем компьютере. Claude видит названия колонок, форматы и итоговые цифры, но не строки с игроками: обзор выгрузок скрывает ID, суммы и текст, списки игроков пишутся в файлы. Сторонние библиотеки и интернет не нужны.
+## Requirements
 
-## Что выгрузить
+- Claude Code (in the terminal, the desktop app or an editor extension).
+- `python3` 3.9 or newer. No third-party libraries and no internet access are needed.
+- Exports as CSV or XLSX with any column names. The minimum is deposits for 60-120 days with all attempts (successful, declined, abandoned), with date, amount, status and payment method. One query with deposits, withdrawals and player data in each row covers 7 of the 12 reasons. More files cover more reasons:
 
-Образец: [examples/export-example.xlsx](examples/export-example.xlsx). В нем лист "Инструкция" (какие данные нужны и где их взять в бэк-офисе), лист "Колонки" (что значит каждая колонка) и пять листов данных на вымышленных игроках. Книгу можно заполнить и загрузить как есть, а можно принести свои выгрузки: CSV или XLSX с любыми названиями колонок.
-
-![Пример выгрузки: лист Депозиты](examples/export-example.png)
-
-**Выгрузки делает аналитик?** Дайте ему [examples/export-queries.sql](examples/export-queries.sql): запрос на каждый файл с теми же названиями колонок, что в образце, и минимум одним запросом. Достаточно заменить имена таблиц и колонок на свои.
-
-Минимум: депозиты за 60-120 дней со всеми попытками (успешные, отклоненные, брошенные), с датой, суммой, статусом и способом оплаты. Один запрос с депозитами и выводами и данными игрока в каждой строке дает 7 из 12 причин. Чем больше данных, тем больше сценариев посчитается:
-
-| Файл | Что добавляет |
+| File | What it adds |
 |---|---|
-| Депозиты со статусами | FTD, второй депозит, Sum Dep, апрув кассы, причины "много отказов подряд", "второй депозит не прошел", "FTD не с первой попытки"; с причиной отказа еще отказ по лимиту и блокировка гемблинга в банке |
-| Выводы со статусом и временем выплаты | причины "вывод отклонен", "долгий вывод", "выиграл и вывел", "отыграл бонус и вывел" |
-| Бонусы с вейджером и итогом | причина "бонус с тяжелым вейджером" и действие по статусу бонуса |
-| Ставки по дням или сессиям | причины "сгорел быстро", "выиграл и не вывел", "деньги на балансе" |
-| Игроки | точное определение FTD, страны (и правила стран), источники, дата запроса документов, исключение самоисключенных и игроков с лимитами |
+| Deposits with statuses | FTD, second deposit, Sum Dep, cashier approval, "many failures in a row", "second deposit failed", "FTD not on the first try"; with a decline reason, also declines by deposit limit and gambling blocks at the bank |
+| Withdrawals with status and payout time | "withdrawal rejected", "slow withdrawal", "won and withdrew", "wagered a bonus and withdrew" |
+| Bonuses with wagering and outcome | "heavy wagering bonus" and the action by bonus status |
+| Bets by day or session | "burned out fast", "won and kept the balance", "money left on balance" |
+| Players | exact FTD definition, countries (and country rules), traffic sources, document request date, exclusion of self-excluded players and players with limits |
 
-Claude сам сопоставит колонки со схемой и спросит только то, что нельзя понять из файла. До расчета скилл проверит готовность: скажет, сколько причин из 12 посчитается с вашими файлами и что добавить для остальных. Подробно: [references/data.md](references/data.md).
+Template: [examples/export-example.xlsx](examples/export-example.xlsx) (sheet names and instructions in Russian, column names in English). For analysts: [examples/export-queries.sql](examples/export-queries.sql), one query per file with the same column names. Before the calculation the skill tells you how many of the 12 reasons your files cover and what to add for the rest. Details: [references/data.md](references/data.md).
 
-**Данные в Google Таблицах.** Файл, Скачать, Microsoft Excel (.xlsx): все листы попадут в одну книгу, скилл прочитает ее как есть. По ссылке скилл таблицы не читает: ссылка, открытая без входа в аккаунт, видна любому, у кого она есть, а в таблице данные игроков. Образец тоже можно открыть в Google Таблицах, заполнить и скачать обратно в XLSX.
+## Installation
 
-## Каждый день без ручной работы
-
-1. **Одна папка** для выгрузок, например `~/second-deposit-data`. На Mac не на Рабочем столе и не в Документах или Загрузках: туда планировщик без отдельного разрешения не пустит.
-2. **Выгрузки с датой в имени:** `deposits_2026-10-17.csv`, `players_2026-10-17.csv`. Скилл берет самую свежую. Раз в месяц положите туда же выгрузку за 60-120 дней: она станет самой свежей, и скилл пересчитает норму и профиль.
-3. **Расписание.** Попросите Claude: "поставь ежедневный запуск second-deposit в 9:00". Он покажет команду и добавит задачу в планировщик системы с вашего согласия. Дальше скрипт работает без Claude: ему нужен только python3.
-4. **Утром** результат лежит в `second-deposit/lists/<дата>/`: `actions.csv` (сколько игроков на каждое действие и что делать), файл на каждое действие для загрузки в CRM как сегмент, `rescue_list.xlsx` для чтения в Excel, копия отчета.
-
-## Установка
-
-Нужен Claude Code (в терминале, в десктопном приложении или в расширении для редактора) и `python3`.
-
-### Одна команда
+### Option 1. git clone
 
 ```bash
 git clone https://github.com/igamingsychov/second-deposit-igaming.git ~/.claude/skills/second-deposit
 ```
 
-### Пусть Claude установит сам
+### Option 2. npx skills
 
-Откройте Claude Code и вставьте:
-
-```text
-Установи скилл second-deposit из https://github.com/igamingsychov/second-deposit-igaming : склонируй репозиторий в ~/.claude/skills/second-deposit (если папка уже есть, спроси меня), проверь, что есть python3, и скажи, что мне написать для проверки.
+```bash
+npx skills add igamingsychov/second-deposit-igaming
 ```
 
-### Проверка
+This uses the open skills CLI (needs Node.js). Add `-g -a claude-code` to install the skill for Claude Code in all projects.
 
-Откройте новую сессию Claude Code и напишите:
+### Option 3. Ask Claude Code to install it
+
+Open Claude Code and paste:
 
 ```text
-покажи демо скилла second-deposit
+Install the second-deposit skill from https://github.com/igamingsychov/second-deposit-igaming : clone the repository into ~/.claude/skills/second-deposit (if the folder already exists, ask me), check that python3 is available, and tell me what to type to test it.
 ```
 
-Claude создаст вымышленную книгу в формате образца и соберет по ней отчет.
+### Check
 
-Обновить: `git -C ~/.claude/skills/second-deposit pull`. Удалить: `rm -rf ~/.claude/skills/second-deposit`.
+Open a new Claude Code session and type:
 
-## Как пользоваться
+```text
+show the second-deposit skill demo
+```
 
-- `разбери второй депозит по выгрузкам в ~/Downloads/exports`
-- `почему FTD не возвращаются? файлы в папке data`
+Claude creates a fictional workbook in the template format and builds a report from it.
+
+Update: `git -C ~/.claude/skills/second-deposit pull`. Remove: `rm -rf ~/.claude/skills/second-deposit`.
+
+## Example requests
+
+- `analyze the second deposit from the exports in ~/Downloads/exports`
+- `why don't our FTDs come back? the files are in the data folder`
 - `/second-deposit ~/Desktop/payments.xlsx`
-- `собери список FTD на сегодня по свежей выгрузке`
+- `build today's FTD list from the fresh export`
+- `set up a daily second-deposit run at 9:00`
 
-На выходе папка `second-deposit` рядом с выгрузками: `report.html` (отчет), `rescue_list.csv` (список для CRM), `summary.json` (итоги), `scenarios.csv` и `segments.csv` (таблицы), `excluded_rg.csv` (кого исключили по ответственной игре) и папка `lists/<дата>/` со списком по действиям. Отчет бывает на русском, украинском и английском: Claude выберет язык вашего вопроса.
+The daily run works without Claude: with your consent, Claude adds a task to the system scheduler (cron on macOS and Linux, schtasks on Windows), and the script needs only `python3`. Put exports with the date in the file name into one folder, for example `deposits_2026-10-17.csv`: the newest file is picked up. Every morning `second-deposit/lists/<date>/` holds the files for your CRM.
 
-**Список для CRM.** У каждого игрока коды причины и действия (`reason_code`, `action_code`), приоритет (1 сейчас, 2 в течение суток, 3 по цепочке или через 1-3 дня), время отправки `send_after_utc` и момент среза `snapshot_utc`, плюс тексты: состояние, что сделать, способ оплаты, правила страны. Файл на каждое действие загружается в CRM как готовый сегмент. Список снимается на момент последней попытки депозита в выгрузке: в CRM поставьте условие "нет депозита после `snapshot_utc`".
+## Data stays on your machine
 
-## Как считает
+The scripts run locally. Claude sees column names, formats and totals, but not player rows: the export overview hides IDs, amounts and free text, and player lists are written to files. The skill sends nothing anywhere and does not open spreadsheets by link.
 
-- **STD**: доля FTD со вторым депозитом за 7 дней.
-- **Норма**: STD похожих игроков без проблемных сигналов: тот же размер FTD, источник и страна.
-- **Недобор**: сколько вторых депозитов не хватает до нормы. В деньгах вилка: минимум только сами вторые депозиты, максимум Sum Dep вернувшегося игрока за 30 дней (выбросы обрезаны). Это верхняя граница: столько стоит разрыв.
-- **Срезы**: только разрывы больше случайных.
-- **Действия по состоянию**: вывод в обработке и выплаченный вывод, активный и проигранный бонус, отказ банка и отказ по лимиту депозитов получают разные рекомендации.
-- **Правила стран**: порог долгого вывода по законному сроку страны, если он короче 24 часов; запрещенные в стране способы оплаты не подсказываются; законные лимиты депозитов меняют действие. Справочник с источниками: [references/geo_rules.md](references/geo_rules.md).
-- **Ответственная игра**: самоисключенные, игроки с лимитами и с блокировкой гемблинга в банке не входят ни в расчет, ни в список.
+## Limitations
 
-Сценарий показывает, где теряются игроки, но не доказывает причину. Причину проверяет тест: действие для половины сценария, вторая половина контрольная. Определения, пороги и триггеры для CRM: [references/scenarios.md](references/scenarios.md).
+- No market benchmarks. There is no reliable public benchmark for the second deposit, so the skill never uses outside numbers. Reasons, actions and country rules work from day one; the norm, forecast and money appear from day 8, once 50 FTDs are older than 7 days. For a full run, export a period with at least 50 FTDs older than 7 days, better 300.
+- A reason shows where players are lost, it does not prove the cause. The cause is tested with the control group.
+- The missing Sum Dep is an upper bound: the range goes from the second deposits alone to the 30-day Sum Dep of a returning player (outliers trimmed).
+- Which reasons are counted depends on the files you provide.
+- Online spreadsheets are not read by link: download the workbook as XLSX and put it in the folder.
+- Country rules cover 11 countries, as of 18.10.2026. Laws change: check the source before compliance decisions.
+- Self-excluded players, players with limits and players with a gambling block at their bank are left out of the calculation and the list. If your exports have no such flags, exclude these players on the CRM side.
+- On macOS the scheduler cannot read the Desktop, Documents or Downloads folders without a separate permission: keep the export folder elsewhere, for example `~/second-deposit-data`.
+- The skill instructions, references and the template's sheet names are in Russian.
 
-Окно второго депозита, горизонт Sum Dep, порог тяжелого вейджера и другие параметры меняются по просьбе: `python3 scripts/sd_analyze.py --help`.
+## Links
 
-## Если что-то не работает
+- Skill page: [sychov-igaming.com/en/skills/second-deposit](https://sychov-igaming.com/en/skills/second-deposit/)
+- Russian version of this README: [README.ru.md](README.ru.md)
 
-| Симптом | Что делать |
-|---|---|
-| Статусы без сопоставления | Скрипт перечислит их: скажите Claude, что значит каждый статус, или пусть спросит |
-| Валюты без курса | Дайте курс к валюте отчета или выгрузите суммы в одной валюте |
-| Даты не разобрались | Проверьте порядок дня и месяца (05.03 это 5 марта или 3 мая) |
-| Данные в Google Таблицах | Файл, Скачать, Microsoft Excel (.xlsx) и положите файл в папку |
-| Оговорка про часовые пояса | В одних файлах время с поясом, в других без: скажите Claude, в каком поясе пишет касса |
-| Мало FTD для анализа | Выгрузите период длиннее: нужно от 50 FTD старше 7 дней, лучше от 300 |
-| Сценарий "нет данных" | Добавьте файл, который нужен этому сценарию (таблица выше) |
-| `python3: command not found` | macOS: `xcode-select --install` или `brew install python`. Windows: python.org |
-| Расписание не срабатывает на Mac | Папка выгрузок на Рабочем столе, в Документах или Загрузках: перенесите ее в домашнюю папку, например `~/second-deposit-data` |
-| Скилл взял не тот файл | С `"latest": true` берется самый свежий по времени изменения: не копируйте старые выгрузки в папку поверх новых |
+## License
 
-## Автор и лицензия
+MIT, see [LICENSE](LICENSE).
 
-Автор: Yevhen Sychov, [sychov-igaming.com](https://sychov-igaming.com). Лицензия MIT, см. [LICENSE](LICENSE).
+## Author
 
-Новые инструменты для ретеншна и CRM: [Telegram-канал Sychov iGaming](https://t.me/+yEnc3sPR_pA0Mzcy).
+[Yevhen Sychov](https://sychov-igaming.com)
 
----
-
-## In English
-
-Export template: [examples/export-example.xlsx](examples/export-example.xlsx) (sheet names and instructions in Russian; column names are plain English). A Claude Code skill that reads your casino back-office exports and shows why first-time depositors do not make a second deposit: 12 reasons (from failed top-ups and slow withdrawals to heavy wagering bonuses and burning out fast) plus everyone else as the norm, missed second deposits and Sum Dep per month for each, 24 metrics with definitions, segments with a real drop, and today's list of recent FTDs to win back with an action for each. Country rules from official sources change the actions: legal payout deadlines, payment methods banned in the country, legal deposit limits. No market benchmarks: without history the skill says so and switches to your own data from day 8. Scripts run on your machine with plain `python3`; Claude only sees column names and totals, never player rows.
-
-```bash
-git clone https://github.com/igamingsychov/second-deposit-igaming.git ~/.claude/skills/second-deposit
-```
-
-Then ask Claude Code: `show the second-deposit skill demo`, or `why don't our FTDs come back? exports are in ~/Downloads/exports`. Your analyst can use [examples/export-queries.sql](examples/export-queries.sql) to pull the files. Before the run the skill tells you how many of the 12 reasons your files cover. Daily runs can be scheduled without Claude: drop dated exports into one folder, the newest file is picked up, and every morning `second-deposit/lists/<date>/` holds one CSV per action (reason and action codes, priority, send time in UTC) ready to upload to your CRM as a segment. Reports are available in English, Ukrainian and Russian. MIT licence, author Yevhen Sychov.
+21+. Material for gambling industry professionals, not gambling advertising.
